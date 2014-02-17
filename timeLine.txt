@@ -1,0 +1,33 @@
+Wolfbekenstein timeline:
+
+Paradise & PlanetEarth pic	DONE
+Wolfbekenstein pic			DONE
+(exploding badge here?)
+Rutt-Etra scene with police car DONE
+Car picture						DONE
+Crime-scene picture with mandelbulb DONE
+Dollar scene with lincoln Face DONE
+Levitating guy scene	DONE
+Truck scene - city scene
+TUM truck picture	DONE
+Ending with tunnel DONE
+
+Luis twister somewhere?
+
+filesToLoad:
+
+audioTrack
+Paradise & PlanetEarth pic
+Wolfbekenstein pic
+Rutt-Etra scene with police car
+	car object
+	camera file
+Car picture
+Crime-scene picture
+Dollar scene
+	lincoln Face
+	bill
+Levitating guy picture
+Truck scene - truck model/city model?
+TUM truck picture
+end picture with tunnel

@@ -1,0 +1,1155 @@
+<html>
+<head>
+    <style>
+      body {
+				background-color: #000;
+				margin: 0px;
+				
+				overflow: hidden;
+			
+			}
+		
+			.fullSCreen {
+				position: absolute;
+				color: #000;
+				padding: 0;
+				margin: 0px;
+				margin-left: auto;
+				margin-right: auto;
+				width: 100%;
+				height: 100%;
+			
+			}
+			
+		.pace .pace-progress {
+		background: #29d;
+		position: fixed;
+		z-index: 2000;
+		top: 0;
+		left: 0;
+		height: 2px;
+
+		-webkit-transition: width 1s;
+		-moz-transition: width 1s;
+		-o-transition: width 1s;
+		transition: width 1s;
+		}
+
+		.pace-inactive {
+		display: none;
+		}
+
+			
+
+			
+    </style>
+</head>
+<body>
+		<script src="js/jquery.min.js"></script> 
+		<script src="build/three.min.js"></script>
+		<script src="js/Detector.js"></script>
+		<script src="js/stats.min.js"></script>
+		<script src="js/OBJMTLLoader.js"></script>
+		<script src="js/MTLLoader.js"></script>
+		<script src="js/jsRocket.min.js"></script>
+		<script src="js/loaders/OBJLoader1.js"></script>
+			<script src="js/pace.min.js"></script>
+		
+<script type="x-shader/x-vertex" id="vertexshader">
+			
+			varying vec2 vUv;
+			void main()	{
+				vUv = uv;
+				
+				gl_Position = vec4( position, 1.0 );
+
+			}
+		</script>
+
+		<script type="x-shader/x-fragment" id="fragmentshader">
+				 
+			 varying vec2 vUv;
+				 uniform float time;
+				 uniform vec2 resolution;
+			
+				const float PI=3.14159265358979323846;
+				float speed=time*0.2975;
+				float r = 4.1;
+				float qtime = sin (time)*.4;
+
+				float Power =8.0;
+
+				float marched = 0.0;
+				float scale = .0;
+				float min_distance = 1.0;
+				float max_distance = 3.2;
+				float glitter = 11.2;
+				float utime = time / 2.0;
+				float an= sin(utime)*3.14157;
+				float h=0.7;
+
+				vec2 rotate(vec2 k,float t)
+				{
+				return vec2(cos(t)*k.x-sin(t)*k.y,sin(t)*k.x+cos(t)*k.y);
+				}
+
+				float sphere( vec3 pos){
+				vec3 z = pos;
+	
+				float dr = 2.0;
+				float r = 0.0;
+	
+					for (int i = 0; i < 125 ; i++) {
+					r = length(z);
+					if (r>2.0) break;
+		
+					// convert to polar coordinates
+					float theta = acos( z.z/r );
+					float phi = atan( z.y,z.x );
+					dr =  pow( r, Power-1.0)*Power*dr + 1.0;
+		
+					// scale and rotate the point
+					float zr = pow( r,Power);
+					theta = theta*Power;
+					phi = phi*Power;
+		
+					// convert back to cartesian coordinates
+					z = (vec3(sin(theta)*cos(phi), sin(phi)*sin(theta), cos(theta))*zr);
+					z+=pos;
+					}
+				return 0.5*log(r)*r/dr;
+				}
+
+				float rm(vec3 origin, vec3 ray) {
+				float distance_marched = min_distance;
+
+					for (int i=0; i<150; i++) {
+					float step_distance = sphere(origin + ray*distance_marched);
+					if (abs(step_distance) < 0.001 ) {
+					return distance_marched/(max_distance-min_distance);
+					}
+				distance_marched += step_distance;
+				marched = distance_marched;
+				if (distance_marched > max_distance) {
+				return -1.0;
+					}
+				}
+				return -1.0;
+				}
+
+					
+					vec3 render(vec2 q) {
+					vec3 eye = vec3(0.0, .2, -3.0 + qtime/ 2.0 );
+					vec3 screen = vec3(q,1.0);
+					vec3 ray = normalize(screen - eye);
+					ray.yz=rotate(ray.yz,PI*0.01*sin(speed*0.525));	// rotation x
+					ray.zx=rotate(ray.zx,-PI*qtime*0.25);				// rotation y
+					ray.xy=rotate(ray.xy,speed*PI*0.8);					// rotation z
+
+					eye.yz=rotate(eye.yz,PI*0.5*sin(PI*qtime*0.125));		// rotation x
+					eye.zx=rotate(eye.zx,-PI*qtime*0.25);				// rotation y
+					eye.xy=rotate(eye.xy,speed*PI*0.8);					// rotation z
+					
+					float s = rm(eye, ray);
+					vec3 col;
+	
+					if (s == 0.0) {
+					col =  vec3(0.0);
+
+					} else {
+	
+					col = vec3(s-.8*.8+0.4*q.y *sin(q.x))*marched/1.76;
+					col.rg *= marched*.3;
+					}
+	
+					return col;
+					}
+
+				
+					void main() {
+					{
+						vec2 q =  (vUv.xy*4.0)-2.0 ;
+
+	
+					vec3 col = render(q);
+					q.x=col.x;
+					q.y=col.y;	
+					gl_FragColor = vec4(col,1.0); 	
+					}
+					}
+		
+		</script>		
+		
+		<script type="x-shader/x-vertex" id="vertexshader1">
+			attribute float size;
+			attribute float time;
+			attribute vec3 customColor;
+			varying vec3 vColor;
+			float an = size*1.0;
+			void main() {
+				vColor = customColor;
+				vec4 mvPosition = modelViewMatrix * vec4( position.x+size/2.0,position.y,position.z, 1.0 );
+				gl_PointSize = size * ( 300.0 / length( mvPosition.xyz ) );
+				gl_Position = projectionMatrix * mvPosition  ;
+			}
+
+		</script>
+
+		<script type="x-shader/x-fragment" id="fragmentshader1">
+
+			uniform vec3 color;
+			uniform sampler2D texture;
+			varying vec3 vColor;
+			void main() {
+				gl_FragColor = vec4( color * sin(vColor*color), 1.0 );
+				gl_FragColor = gl_FragColor * texture2D( texture, gl_PointCoord );
+			}
+		</script>
+		
+<script>
+
+
+		var WIDTH = 640,
+		HEIGHT = 512,		
+		SIZE = WIDTH * HEIGHT,
+		src_canvas, src_context, src_image, src_data,
+		dst_canvas, dst_context, dst_image, dst_data,
+		count = 0,
+		step =9;	
+		var mesh500 = null;
+		var pixelLength = WIDTH*HEIGHT;
+		var mLUT_u = new Array(pixelLength);
+		var mLUT_v = new Array(pixelLength);
+		var mLUT_b = new Array(pixelLength);
+
+		var playArray;
+		var frame = 577;
+		var state  = null;
+		 var playBack = true;
+		 var startFrame = null;
+		  var record = false;
+		 cameraPath={
+			camera: [ [],[],[] ],
+			object1:[ [],[],[] ],
+			object2:[ [],[],[] ],
+			object1Rot:[ [],[],[] ],
+			object2Rot:[ [],[],[] ]
+				};
+				targetResolutionWidth = 1360;
+			targetResolutionHeight = 768;
+		var sphere, uniforms, attributes;		
+		mesh3 = 0;
+		var wait = 0;
+		var container, stats;
+		var timeswitch = 0;
+		var swithced = false;
+		texture= 0;
+		var ORIGIN = new THREE.Vector3();
+		var time = 0;
+		var time2 = 0;
+		timer = 0;
+		var camera, scene, renderer,stats;
+		var mouseX = 0, mouseY = 0;
+		var windowHalfX = window.innerWidth / 2;
+		var windowHalfY = window.innerHeight / 2;
+		var imageWidth = 781;
+		var imageHeight = 585;
+		lineHolder = new THREE.Object3D();
+		lineHolder.dynamic = true;
+		var context;
+
+		$(document).ready(function() {
+		$('#container').hide();
+		material = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 1,vertexColors: true });
+		var filesLoaded = 0;
+		var filesToLoad = 15;
+
+		var Demo = (function () {
+
+        var BPM = 105,
+            ROWS_PER_BEAT = 4,
+            ROW_RATE = BPM / 60 * ROWS_PER_BEAT;
+            
+        var _demoMode = true, //Set to true for preview
+            _syncDevice = new JSRocket.SyncDevice(),
+            _row = 0,
+            _previousIntRow;
+        
+            
+           _audio = new Audio(),
+        
+        (function init() {
+		console.log ("init");
+		
+			time= 0;
+			time2= 0;
+			time3= 0;
+			var canvas = document.createElement('canvas');
+            canvas.width = 16;
+            canvas.height = 16;
+			var attributes;
+            var context = canvas.getContext('2d');
+            var gradient = context.createRadialGradient(canvas.width / 2, canvas.height / 2, 0, canvas.width / 2, canvas.height / 2, canvas.width / 2);
+            gradient.addColorStop(0, 'rgba(255,255,255,1)');
+            gradient.addColorStop(0.2, 'rgba(0,255,255,1)');
+            gradient.addColorStop(0.4, 'rgba(0,0,64,1)');
+            gradient.addColorStop(1, 'rgba(0,0,0,1)');
+            context.fillStyle = gradient;
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            var texture3 = new THREE.Texture(canvas);
+            texture3.needsUpdate = true;
+		
+		attributes1 = {
+
+				size: {	type: 'f', value: [] },
+				time: {	type: 'f', value: [] },
+				customColor: { type: 'c', value: [] }
+
+			};
+
+			uniforms1 = {
+
+				amplitude: { type: "f", value: 1.0 },
+				color:     { type: "c", value: new THREE.Color( 0xffffff ) },
+				texture:   { type: "t", value: texture3 },
+
+			};
+
+			shaderMaterial = new THREE.ShaderMaterial( {
+
+				uniforms: 		uniforms1,
+				attributes:     attributes1,
+				vertexShader:   document.getElementById( 'vertexshader1' ).textContent,
+				fragmentShader: document.getElementById( 'fragmentshader1' ).textContent,
+
+				blending: 		THREE.AdditiveBlending,
+				depthTest: 		false,
+				transparent:	true
+
+			});
+		
+		var loader = new THREE.OBJMTLLoader();
+		loader.addEventListener( 'load', function ( event ) {
+		var object = event.content;
+		mesh3 = object;
+		filesLoaded++;
+		});
+		loader.load( 'alus.obj', 'alus.mtl' );
+		
+		moi = new THREE.Geometry();
+		var loader1 = new THREE.OBJLoader();
+				
+		loader1.load('naama1.obj', function (geometry) {
+           var material = new THREE.ParticleBasicMaterial({
+                color: 0xffffff,
+                size: 1.3,
+                opacity: .6,
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+				map: texture
+                     });
+				filesLoaded++;
+				// geometry is a group of children. If a child has one additional child it's probably a mesh
+			
+				   geometry.traverse(function(child) { 
+							if ( child instanceof THREE.Mesh ) {
+								moi.vertices=child.geometry.vertices;
+									}
+							});
+				});
+					
+					container = null;
+					container = document.getElementById( 'effect' );
+					dst_canvas = document.createElement( 'canvas' );
+					dst_canvas.width = WIDTH;
+					dst_canvas.height = HEIGHT;
+					
+					dst_canvas.style.left = 180;
+					dst_canvas.style.top = 20;
+				//	dst_canvas.style.cursor = 'pointer';
+					dst_canvas.className = 'fullSCreen';
+					dst_context = dst_canvas.getContext( '2d' );
+					dst_context.fillStyle = '#000';
+					dst_context.fillRect( 0, 0, WIDTH, HEIGHT );
+					dst_image = dst_context.getImageData( 0, 0, WIDTH, HEIGHT );
+					dst_data = dst_image.data;
+
+					container.appendChild(dst_canvas);
+					
+					createLUT(3, WIDTH,HEIGHT);
+
+					texture4 = new Image();
+					
+					texture4.addEventListener('load', function() {
+						src_canvas = document.createElement( 'canvas' );
+						src_canvas.width = this.width;
+						src_canvas.height = this.height;
+						src_context = src_canvas.getContext( '2d' );
+						src_context.drawImage( this, 0, 0 );
+						src_image = src_context.getImageData( 0, 0, this.width, this.height );
+						src_data = src_image.data;
+						filesLoaded++;
+
+					}, false);
+
+					texture4.src = "red_smoke.jpg";
+		
+		seteli=THREE.ImageUtils.loadTexture( 'Z_Lincoln.png');
+		 $(window).load(function() {
+		 filesLoaded++;
+		 });
+		
+		$.getJSON("camera1.json", function(json) {
+		playArray=json;
+		filesLoaded++;
+		});
+		arrayIndex = 0;
+		
+		$('#viewport').hide();
+		canvas = document.getElementById("viewport");
+		canvasCtx = canvas.getContext("2d");
+			
+    	image= new Image();
+		image.onload = function() {
+  		canvasCtx.drawImage(image, 0, 0);
+    	imgData = canvasCtx.getImageData(0,0,781,585);
+		texture = imgData.data;
+		filesLoaded++;
+		ruttera();
+		}	
+		image.src = 'art/Paradise_Planet_Earth_logo.png';
+		
+		$('#viewport1').hide();
+		canvas1 = document.getElementById("viewport1");
+		canvasCtx1 = canvas1.getContext("2d");
+			
+    	image1= new Image();
+		image1.onload = function() {
+  		canvasCtx1.drawImage(image1, 0, 0);
+    	imgData1 = canvasCtx1.getImageData(0,0,1161,783);
+		texture1 = imgData1.data;
+		filesLoaded++;
+		}	
+		image1.src = 'art/WB300_ontop1.png';
+		
+		$('#viewport2').hide();
+		canvas2 = document.getElementById("viewport2");
+		canvasCtx2 = canvas2.getContext("2d");
+			
+    	image2= new Image();
+		image2.onload = function() {
+  		canvasCtx2.drawImage(image2, 0, 0);
+    	imgData2 = canvasCtx2.getImageData(0,0,2178,1113);
+		texture2 = imgData2.data;
+		filesLoaded++;
+		}	
+		image2.src = 'art/FutureCop.png';
+	
+		$('#viewport3').hide();
+		canvas3 = document.getElementById("viewport3");
+		canvasCtx3 = canvas3.getContext("2d");
+			
+    	image3= new Image();
+		image3.onload = function() {
+  		canvasCtx3.drawImage(image3, 0, 0);
+    	imgData3 = canvasCtx3.getImageData(0,0,1336,767);
+		texture3 = imgData3.data;
+		filesLoaded++;
+		}	
+		image3.src = 'art/car.png';
+		
+		$('#viewport4').hide();
+		canvas4 = document.getElementById("viewport4");
+		canvasCtx4 = canvas4.getContext("2d");
+			
+    	image4= new Image();
+		image4.onload = function() {
+  		canvasCtx4.drawImage(image4, 0, 0);
+    	imgData4 = canvasCtx4.getImageData(0,0,1200,741);
+		texture4 = imgData4.data;
+		filesLoaded++;
+		}	
+		image4.src = 'art/crimescene.png';
+		
+		$('#viewport5').hide();
+		canvas5 = document.getElementById("viewport5");
+		canvasCtx5 = canvas5.getContext("2d");
+			
+    	image5 = new Image();
+		image5.onload = function() {
+  		canvasCtx5.drawImage(image5, 0, 0);
+    	imgData5 = canvasCtx5.getImageData(0,0,547,628);
+		texture5 = imgData5.data;
+		filesLoaded++;
+		}	
+		image5.src = 'tunnel.png';
+		
+		var loader6 = new THREE.OBJMTLLoader();
+		loader6.addEventListener( 'load', function ( orr ) {
+		var object1 = orr.content;
+		mesh500 = object1;
+		filesLoaded++;
+				});
+		loader6.load( 'dexter.obj', 'dexter.mtl' );
+		
+		
+		
+		
+		$('#viewport6').hide();
+		canvas6 = document.getElementById("viewport6");
+		canvasCtx6 = canvas6.getContext("2d");
+			
+    	image6 = new Image();
+		image6.onload = function() {
+  		canvasCtx6.drawImage(image6, 0, 0);
+    	imgData6 = canvasCtx6.getImageData(0,0,1055,552);
+		texture6 = imgData6.data;
+		filesLoaded++;
+		}	
+		image6.src = 'art/wolf.png';
+		
+		$('#viewport10').hide();
+		canvas7 = document.getElementById("viewport10");
+		canvasCtx7 = canvas7.getContext("2d");
+			
+    	image7= new Image();
+		image7.onload = function() {
+  		canvasCtx7.drawImage(image7, 0, 0);
+    	imgData7 = canvasCtx7.getImageData(0,0,711,584);
+		texture7 = imgData7.data;
+		filesLoaded++;
+		}	
+		image7.src = 'art/WB_CREDITS_.png';
+            
+		$('#viewport11').hide();
+		canvas8 = document.getElementById("viewport11");
+		canvasCtx8 = canvas8.getContext("2d");
+			
+    	image8= new Image();
+		image8.onload = function() {
+  		canvasCtx8.drawImage(image8, 0, 0);
+    	imgData8 = canvasCtx8.getImageData(0,0,1024,768);
+		texture8 = imgData8.data;
+		filesLoaded++;
+		
+		}	
+		image8.src = 'art/dexter.png';	
+		
+			waitLoading();
+			
+           
+        }());
+        
+		
+        function prepareScene() {
+		
+		console.log("prepareSync");
+		material = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 1,vertexColors: true });
+	
+		
+		 var urls = [
+              'art/texture/2.jpg',
+              'art/texture/4.jpg',
+              'art/texture/6.jpg',
+              'art/texture/5.jpg',
+              'art/texture/1.jpg',
+              'art/texture/3.jpg'
+            ];
+		
+		scene = new THREE.Scene();
+		
+	
+		var cubemap = THREE.ImageUtils.loadTextureCube(urls);
+		var material = new THREE.MeshBasicMaterial( { color: 0xffffff, envMap: cubemap } );
+        var shader = THREE.ShaderLib[ "cube" ];
+		shader.uniforms[ "tCube" ].value = cubemap;
+
+		var material = new THREE.ShaderMaterial( {
+
+		fragmentShader: shader.fragmentShader,
+		vertexShader: shader.vertexShader,
+		uniforms: shader.uniforms,
+		depthWrite: false,
+		side: THREE.BackSide
+
+		} ),
+		space = new THREE.Mesh( new THREE.CubeGeometry( 2900, 2900, 2900 ), material );
+
+		scene.add( space );
+				
+		movement = false;
+		camera = new THREE.PerspectiveCamera(25, window.innerWidth / window.innerHeight, 1, 10000 );
+		camera.position.z = 700;
+		scene.add( camera );
+				
+		var ambientLight = new THREE.AmbientLight(0xbbbbbb);
+		scene.add(ambientLight);
+		
+		// directional lighting
+		var directionalLight = new THREE.DirectionalLight(0xffffff);
+		directionalLight.position.set(0, 1, 1).normalize();
+	 	scene.add(directionalLight);
+	
+		lineHolder.position.y = -10.0;
+		lineHolder.position.x = -0.0;
+		lineHolder.rotation.x = -80.0;
+		lineHolder.rotation.z = 0.0;
+		lineHolder.rotation.y = 0;
+		
+		lineHolder.scale = new THREE.Vector3(.6,.6, .6);
+		scene.add(lineHolder);
+		time2 =50;
+		
+		var canvas1 = document.getElementById('viewport7') ;
+
+		renderer = new THREE.WebGLRenderer( { canvas: canvas1 } );
+		renderer.setSize( window.innerWidth, window.innerHeight );
+		window.addEventListener( 'resize', onWindowResize, false );
+		scene.add(mesh3);
+		mesh3.scale.x = 1.2 ;       
+		mesh3.scale.y = 1.2; 
+		mesh3.scale.z = 1.2;
+		mesh3.rotation.y = -1.6;
+		mesh3.position.y = lineHolder.position.y + 20;
+		
+		
+	
+		
+         console.log ("Done");
+		 prepareSync();
+           
+        }
+		
+		function fsqrt(num) {
+	// Create an initial guess by simply dividing by 3.
+	var lastGuess, guess = num / 3;
+
+	// Loop until a good enough approximation is found.
+	do {
+		lastGuess = guess;  // store the previous guess
+
+		// find a new guess by averaging the old one with
+		// the original number divided by the old guess.
+		guess = (num / guess + guess) / 2;
+
+		// Loop again if the product isn't close enough to
+		// the original number.
+	} while(Math.abs(lastGuess - guess) > 5e-15);
+
+	return guess;  // return the approximate square root
+};
+
+// fill math lookup table values with crazy values
+function createLUT(effectStyle, w,h){
+	// increment placeholder
+	var k = 0;
+
+	// u and v are euclidean coordinates  
+	var u,v,bright = 0; 
+
+	with(Math)
+	for( var j=0; j < h; j++ )
+	{
+		var y = -1.00 + 2.00*j/h;
+		for( var i=0; i < w; i++ )
+		{
+			var x = -1.00 + 2.00*i/w;
+			var d = fsqrt( x*x + y*y );
+			//var a = atan2( y, x );
+			
+			var a = atan(y/x);
+			var r = d;
+
+			v = 2/(6*r + 3*x);
+			u = a*3/PI;
+			bright = 25 * -v;
+			
+			u = (512*u) & 512-1;
+			v=  (512*v) & 512-1;
+			
+			mLUT_u[k] = u; //width
+			mLUT_v[k] = v; //height
+			mLUT_b[k++] = bright;
+		}
+	}
+}
+
+function deform() {
+	for (var pixelIndex = 0; pixelIndex < pixelLength; pixelIndex++) {
+		var u = mLUT_u[pixelIndex] + count;   // rotation
+		var v = mLUT_v[pixelIndex] + count;   // zoom
+		var b = mLUT_b[pixelIndex];
+		src_index = (512 * (v & 511 ) + (u & 511)) * 4;
+		dst_index = pixelIndex*4;
+		dst_data[dst_index] = src_data[src_index] + b;
+		dst_data[dst_index + 1] = src_data[src_index + 1] + b;
+		dst_data[dst_index + 2] = src_data[src_index + 2] + b;
+	}
+
+		}
+		function onWindowResize() {
+
+		windowHalfX = window.innerWidth / 2;
+		windowHalfY = window.innerHeight / 2;
+
+		camera.aspect = window.innerWidth / window.innerHeight;
+		camera.updateProjectionMatrix();
+
+		renderer.setSize( window.innerWidth, window.innerHeight );
+		}
+		
+		
+		function waitLoading()	// thx Shazz/TRSi for this snippet!
+				{
+				console.log("Files loaded : " + filesLoaded + " / " + filesToLoad);
+				if(filesLoaded == filesToLoad)
+					{
+				console.log("Loading completed");
+				prepareScene();
+						}
+			else
+				{
+				requestAnimationFrame( waitLoading );
+					}
+					}		
+        function prepareSync() {
+
+            if (_demoMode) {
+                _syncDevice.setConfig({'rocketXML':'cube.rocket'});
+                _syncDevice.init("demo");
+            } else {
+                //_syncDevice.setConfig({'socketURL':'ws://192.168.0.100:1338'});
+                _syncDevice.init();
+            }
+
+            _syncDevice.on('ready', onSyncReady);
+            _syncDevice.on('update', onSyncUpdate);
+            _syncDevice.on('play', onPlay);
+            _syncDevice.on('pause', onPause);
+        }
+
+        function onSyncReady() {
+            
+            _clearR = _syncDevice.getTrack('clearR');
+            _clearG = _syncDevice.getTrack('clearG');
+            _clearB = _syncDevice.getTrack('clearB');
+            _cameraRotation = _syncDevice.getTrack('rotation');
+            _cameraDistance = _syncDevice.getTrack('distance');
+            _fov = _syncDevice.getTrack('FOV');
+
+            prepareAudio();
+        }
+
+        function prepareAudio() {
+            
+            _audio.src = "soundtrack.ogg";
+            _audio.load();
+            _audio.preload = true;
+			
+            _audio.addEventListener('canplay', onAudioReady);
+			
+			}
+        
+		 
+        function onAudioReady() {
+            if(_demoMode) { 
+                render();
+                _audio.play();
+            } else {
+                _audio.pause();
+                _audio.currentTime = _row / ROW_RATE;
+            }
+        }
+
+        function onSyncUpdate(row) {
+
+            if (!isNaN(row)) {
+                _row = row;
+            }
+            render();
+        }
+
+		function generateSprite() {
+           return texture;
+       }
+        function onPlay() {
+
+            _audio.currentTime = _row / ROW_RATE;
+            _audio.play();
+            render();
+        }
+
+        function onPause() {
+
+            _row = _audio.currentTime * ROW_RATE;
+            window.cancelAnimationFrame(render, document);
+            _audio.pause();
+        }
+
+		function ruttera() {
+		var x = 0, y = 0;
+		
+		
+		lineGroup = new THREE.Object3D();
+				
+		for (y=0;y < imageHeight;y += 1) {
+			var geometry = new THREE.Geometry();
+					for  (x=0;x < imageWidth; x +=1) {
+					var col = new THREE.Color(getColor (x,y))
+					var brightness = getBrightness(col);
+					var vertex = new THREE.Vector3(x -imageWidth/2,y -imageWidth/2, -brightness* 26.0  );
+					geometry.vertices.push(vertex);
+					geometry.colors.push(col);
+					}
+			var line = new THREE.Line(geometry,material );
+			lineGroup.add(line);
+	}
+		lineHolder.add(lineGroup);
+		
+}
+
+		
+	// Returns a hexidecimal color for a given pixel in the pixel array.
+	function getColor(x, y) {
+	index = (x + y * imageWidth) * 4;
+	var vari = {
+		r: texture[index + 0],
+		g: texture[index + 1],
+		b: texture[index + 2],
+		};
+	return ( (vari.r<<16) + (vari.g<<8) + vari.b);
+	};
+	function getBrightness(c) {
+	return ( (c.r+c.r+c.b+c.b+c.b+c.b)/6 );
+	};
+		
+        function render() {
+
+            if(_audio.paused === false) {
+                //otherwise we may jump into a point in the audio where there's
+                //no timeframe, resulting in Rocket setting row 2 and we report
+                //row 1 back - thus Rocket spasming out
+                _row = _audio.currentTime * ROW_RATE;
+				var demoShow = _clearR.getValue(_row);
+				var demoSync = _clearG.getValue(_row);
+					
+				switch (demoShow)
+				{
+					case 1:
+						$('#viewport').fadeIn(5000, function() {
+						});
+						break;
+				
+					case 2:
+						$('#viewport').fadeOut(5000, function() {
+						});
+						break;
+					
+					case 3:
+						$('#viewport1').fadeIn(5000, function() {
+						});
+						break;
+						
+					case 4:
+					$('#viewport1').fadeOut(5000, function() {
+						});
+						break;
+										
+					case 5:
+					
+					camera.position.x = playArray.camera[0][frame];
+					camera.position.y = playArray.camera[1][frame];
+					camera.position.z = playArray.camera[2][frame];
+			
+					lineHolder.position.x = playArray.object1[0][frame];
+					lineHolder.position.y = playArray.object1[1][frame];
+					lineHolder.position.z = playArray.object1[2][frame];
+					
+					if (frame < 3400) {
+					mesh3.position.x = playArray.object2[0][frame];
+					mesh3.position.y = playArray.object2[1][frame];
+					mesh3.position.z = playArray.object2[2][frame];
+					mesh3.rotation.x = playArray.object2Rot[0][frame];
+					mesh3.rotation.y = playArray.object2Rot[1][frame];
+					mesh3.rotation.z = playArray.object2Rot[2][frame];
+					}
+						else
+					scene.remove(mesh3);
+					
+					lineHolder.rotation.x = playArray.object1Rot[0][frame];
+					lineHolder.rotation.y = playArray.object1Rot[1][frame];
+					lineHolder.rotation.z = playArray.object1Rot[2][frame];
+										
+					frame++;
+					renderer.render( scene, camera );
+							
+					break;
+				
+					case 6:
+						$('#viewport7').hide();
+						$('#viewport3').fadeIn(5000, function() {
+						
+					});
+						break;
+						
+					case 7:
+					$('#viewport3').fadeOut(5000, function() {
+						});
+						break;	
+
+					case 8:
+					$('#viewport7').remove();
+						// mandelbulb scene
+				camera1 = new THREE.PerspectiveCamera( 30, window.innerWidth/window.innerHeight, 1, 10000 );
+				camera1.position.z = 70;
+
+				scene1 = new THREE.Scene();
+					start_time = Date.now();
+				uniforms = {
+						time: { type: "f", value: 1.0 },
+						resolution: { type: "v2", value: new THREE.Vector2() }
+					};
+					
+					material1 = new THREE.ShaderMaterial( {
+
+						uniforms: uniforms,
+						vertexShader: document.getElementById( 'vertexshader' ).textContent,
+						fragmentShader: document.getElementById( 'fragmentshader' ).textContent
+
+					} );
+
+					mesh1 = new THREE.Mesh( new THREE.PlaneGeometry( 2, 2 ), material1 );
+					scene1.add( mesh1 );
+
+					var canvas2 = document.getElementById('viewport8') ;
+
+					renderer1 = new THREE.WebGLRenderer( { canvas: canvas2 } );
+					renderer1.setSize( 640, 480 );
+					renderer1.autoClear = false;
+					
+					$('#viewport4').show();	
+					case 9:
+								
+					uniforms.time.value += 0.01;
+					renderer1.render( scene1, camera1 );
+					break;
+
+					case 10:
+				$('#viewport8').remove();	
+				$('#viewport4').remove();	
+				scene2 = new THREE.Scene();
+				// create a camera, which defines where we're looking at.
+				camera2 = new THREE.PerspectiveCamera(45, targetResolutionWidth / targetResolutionHeight, 1, 1000);
+				canvas1 = document.getElementById('viewport9') ;
+				webGLRenderer = new THREE.WebGLRenderer({ canvas: canvas1 } );
+				webGLRenderer.setSize( targetResolutionWidth, targetResolutionHeight );
+				
+				webGLRenderer.autoClear = false;
+				scale = (targetResolutionWidth/ targetResolutionHeight)*0.33; 
+				// position and point the camera to the center of the scene
+				camera2.position.z = 250;
+				camera2.lookAt(new THREE.Vector3(0,0, 0));
+				
+				// add spotlight for the shadows
+				var spotLight = new THREE.SpotLight(0xffffff);
+				spotLight.position.set(20, 20, 20);
+				scene2.add(spotLight);
+				var step = 0;
+				// setup the control gui
+				var controls = new function () {
+					this.objectPositionY = -11;
+					this.objectPositionX = -50;
+					this.objectPositionZ = -11;
+					this.scale = scale;
+					this.movementRadius = 50.0;
+					this.movementDepth = -1.3;
+			
+				}
+					group=null;
+														
+					group = new THREE.ParticleSystem(moi, shaderMaterial);
+					group.dynamic = true;
+				   // group.sortParticles = true;
+					var vertices = group.geometry.vertices;
+					var values_size = attributes1.size.value;
+					var values_color = attributes1.customColor.value;
+					for( var v = 0; v < vertices.length; v++ ) {
+					values_size[ v ] =  1.8;
+					values_color[ v ] = new THREE.Color( 0xffffff );
+					}   		     
+					scene2.add(group);   
+				
+						
+						mesh_tunnel = new THREE.Mesh( new THREE.PlaneGeometry( 360, 150 ), new THREE.MeshPhongMaterial({
+						specular: '#ffffff',
+						// intermediate
+						color: '#ffffff',
+						// dark
+						emissive: '#ffffff',
+						shininess: 100, 
+						map: seteli
+						}));
+						scene2.add(mesh_tunnel);
+						break;
+				 						
+					case 11:
+				
+					time += 0.05;
+					time3 += 0.05;
+					time4 = Math.sin(1.1*time3)/80;
+					time2 = Math.sin(-1*time3)/50;
+					
+					for( var i = 0; i < attributes1.size.value.length; i++ ) {
+					attributes1.size.value[ i ] = 3 * Math.sin( 1.1 * i + time );
+					attributes1.time.value[i] = time;
+					}
+			
+					attributes1.size.needsUpdate = true;
+					attributes1.time.needsUpdate = true;
+					
+				
+					
+					group.rotation.y += time2;
+					group.position.y = -11;
+					group.position.x = -50;
+					group.position.z = -11;
+	
+					group.scale.x = 0.58;
+					group.scale.y = 0.58;
+					group.scale.z = 0.58;
+				
+					mesh_tunnel.rotation.y += time4;
+			
+					webGLRenderer.render(scene2, camera2);
+					
+					break;
+					case 12:
+					$('#viewport9').remove();
+					$('#viewport6').fadeIn(5000, function() {
+						});
+					break;
+					
+					case 13:
+					$('#viewport6').fadeOut('slow',function() {
+					});
+					$('#viewport2').fadeIn(5000,function () {
+					});
+					break;
+					
+					case 14:
+					
+					$('#viewport2').fadeOut('slow',function() {
+					});
+								
+								
+					$('#viewport10').fadeIn(5000,function () {
+					});
+								
+					
+					break;
+					
+					case 15:
+					$('#viewport10').remove();
+					$('#container').show();
+					$('#viewport5').show();
+					deform();
+					dst_context.putImageData( dst_image, 0, 0 );
+					count += 3;
+					break;
+					
+					
+					case 16:
+					
+					$('#container').remove();
+					$('#viewport5').remove();
+					$('#viewport11').show();
+					
+					scene3 = new THREE.Scene();
+					// create a camera, which defines where we're looking at.
+					camera3 = new THREE.PerspectiveCamera(45, targetResolutionWidth / targetResolutionHeight, 1, 1000);
+					canvas3 = document.getElementById('viewport12') ;
+					webGLRenderer1 = new THREE.WebGLRenderer({ canvas: canvas3 } );
+					webGLRenderer1.setSize( targetResolutionWidth, targetResolutionHeight );
+				
+					webGLRenderer1.autoClear = false;
+					scale = (targetResolutionWidth/ targetResolutionHeight)*0.33; 
+					// position and point the camera to the center of the scene
+					camera3.position.z = 250;
+					camera3.lookAt(new THREE.Vector3(0,0, 0));
+						
+					 var ambientLight = new THREE.AmbientLight(0xbbbbbb);
+					scene3.add(ambientLight);	
+					 var directionalLight = new THREE.DirectionalLight(0xffffff);
+					directionalLight.position.set(0, 1, 1).normalize();
+					scene3.add(directionalLight);
+					// add spotlight for the shadows
+					var spotLight = new THREE.SpotLight(0xffffff);
+					spotLight.position.set(20, 20, 20);
+					scene3.add(spotLight);
+										
+					mesh500.position.x = 0;
+					mesh500.position.y = 0;
+					mesh500.position.z = 0;
+					
+					mesh500.scale.x = 10;
+					mesh500.scale.y = 10;
+					mesh500.scale.z = 10;
+					
+					scene3.add( mesh500 );
+					
+					break;
+					
+					case 17:
+					
+					mesh500.rotation.x += 0.02;
+					mesh500.rotation.y += 0.0225;
+					mesh500.rotation.z += 0.0175;	
+			
+										
+				
+					webGLRenderer1.render(scene3, camera3);
+					break;
+					
+					case 18:
+					$('#viewport12').fadeOut('slow',function() {
+					});
+					$('#viewport11').fadeOut('slow',function() {
+					});
+					break;
+					}
+				// this informs Rocket where we are
+            	_syncDevice.update(_row);
+            
+           }
+            if((_demoMode === true)  || (_audio.paused === false))
+                window.requestAnimationFrame(render, document);
+            else
+                window.cancelAnimationFrame(render, document);
+        
+		}
+    }());
+	});
+</script>
+
+<canvas id="viewport"  class="fullSCreen" width="781" height="585" >  </canvas> <!-- paradise&planet earth logo-->
+<canvas id="viewport1" class="fullSCreen" width="1161" height="783" >  </canvas><!-- wolf bekenstein logo-->
+<canvas id="viewport2" class="fullSCreen" width="2178" height="1113" >  </canvas><!-- future cop picture-->
+<canvas id="viewport3" class="fullSCreen" width="1336" height="767" >  </canvas><!-- car picture-->
+<canvas id="viewport4" class="fullSCreen" width="1200" height="741"  style=" position: absolute; left: 0; top: 0; z-index: -100;">   >  </canvas><!-- crimescene picture-->
+<canvas id="viewport5" class="fullSCreen" width="547" height="628" style="  left: 0; top: 0; z-index: 3; opacity:0.9">  </canvas><!-- end picture-->
+<canvas id="viewport6" class="fullSCreen" width="1055" height="552" >  </canvas><!-- wolf picture -->
+<canvas id="viewport7" class="fullSCreen" ></canvas>	<!-- rutetra canvas -->
+<canvas id='viewport8' class="fullSCreen" style="  left: 0; top: 0; z-index: 3; background-color: #000000;opacity: 0.4 ; "></canvas> <!-- mandelbulb canvas -->
+<canvas id="viewport9" class="fullSCreen" ></canvas>	<!-- lincoln canvas -->
+<canvas id="viewport10" class="fullSCreen" width="711" height="584" >  </canvas><!-- credits picture-->
+<canvas id="viewport11" class="fullSCreen" width="1024" height="768" >  </canvas><!-- dexter picture-->
+<canvas id="viewport12" class="fullSCreen" ></canvas>	<!-- bottle canvas -->
+
+
+
+</body>
+<div id="container" >
+<div id="effect" ></div>
+
+</div>
+</html>
